@@ -1,0 +1,185 @@
+
+//---------------------------------------------------------------------------------------------
+
+#include <Keypad.h>
+
+#define Password_Lenght 5
+
+//---------------------------------------------------------------------------------------------
+
+
+//input - sensor
+const int buttonPin = 12;
+//
+
+//led light
+const int ledPin =  13;
+//
+
+//password
+char Data[Password_Lenght]; // 6 is the number of chars it can hold + the null char = 7
+char Master[Password_Lenght] = "1981";
+byte data_count = 0, master_count = 0;
+bool Pass_is_good;
+char customKey;
+//
+
+//keypad setup
+const byte ROWS = 4; //four rows
+const byte COLS = 3; //four columns
+//define the cymbols on the buttons of the keypads
+char hexaKeys[ROWS][COLS] = {
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'#', '0', '*'}
+};
+byte rowPins[ROWS] = {11, 10, 9, 6}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {5, 3, 2}; //connect to the column pinouts of the keypad
+
+//initialize an instance of class NewKeypad
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
+//
+
+
+void clearData()
+{
+  while (data_count != 0)
+  {
+    Data[data_count--] = 0; //clear array for new data
+  }
+}
+
+
+//---------------------------------------------------------------------------------------------
+
+int STATE;
+
+void setup() {
+  Serial.begin(9600);
+
+  //    STATE = 'scanningRoom';
+  STATE = 0;
+}
+
+
+//---------------------------------------------------------------------------------------------
+
+
+void loop() {
+
+  //  STATE = 0 - 'scanningRoom'; // 1 - 'motionDetected', 2 - 'enterPassword', 3 - 'bad password', 4 - 'sendEmail'
+  Serial.println("");
+
+
+  if (STATE == 0) {
+    Serial.println("Scanning Room...");
+    digitalWrite(ledPin, LOW);
+    if (digitalRead(buttonPin) == HIGH)
+    {
+      STATE = 1;
+    }
+    else {
+      digitalWrite(ledPin, LOW);
+    }
+  }
+
+
+
+  if (STATE == 1) {
+    //    Motion Detected!
+  
+  for (int i=0; i<3; i++){
+    digitalWrite(ledPin, LOW);
+    delay(100);
+    digitalWrite(ledPin, HIGH);
+    delay(100);
+    }
+    digitalWrite(ledPin, HIGH);
+    STATE = 2;
+  }
+
+
+
+  if (STATE == 2) {
+    Serial.println("Motion Detected! Please insert password.");
+    Serial.println(" ");
+    
+
+    customKey = customKeypad.getKey();
+    if (customKey) // makes sure a key is actually pressed, equal to (customKey != NO_KEY)
+    {
+      Data[data_count] = customKey; // store char into data array
+      data_count++; // increment data array by 1 to store new char, also keep track of the number of chars entered
+    }
+
+    if(data_count == Password_Lenght - 1) // if the array index is equal to the number of expected chars, compare data to master
+    {
+      Serial.println("Password is ");
+
+      if (!strcmp(Data, Master)) { // equal to (strcmp(Data, Master) == 0)
+        Serial.println("Good!");
+  for (int i=0; i<2; i++){
+    digitalWrite(ledPin, LOW);
+    delay(100);
+    digitalWrite(ledPin, HIGH);
+    delay(100);
+    }   
+        digitalWrite(ledPin, LOW);
+        Serial.println("Alarm Disabled!");
+        delay(1000);
+        STATE = 4;
+      } 
+      else {
+        Serial.println("Bad");
+        digitalWrite(ledPin, HIGH);
+        //        STATE = 'sendEmail';
+        STATE = 3;
+      }
+      delay(1000);
+      clearData();
+    }
+  }
+
+
+  if (STATE == 3) {
+    Serial.println("WRONG PASSWORD! WOULD SEND EMAIL, BUT GOING TO SCANNING ROOM NOW...");
+    for (int i=0; i<10; i++){
+    digitalWrite(ledPin, LOW);
+    delay(100);
+    digitalWrite(ledPin, HIGH);
+    delay(100);
+    }
+    delay(2000);
+    STATE = 0;
+  }
+
+  if (STATE == 4) { //good password
+    Serial.println("Alarm OFF - Press any key to turn it ON.");
+    Serial.println(" ");
+    digitalWrite (ledPin, LOW);
+
+    customKey = customKeypad.getKey();
+    if (customKey) // makes sure a key is actually pressed, equal to (customKey != NO_KEY)
+    {
+      Data[data_count] = customKey; // store char into data array
+      data_count++; // increment data array by 1 to store new char, also keep track of the number of chars entered
+    }
+
+    if(data_count == 1) // if the array index is equal to the number of expected chars, compare data to master
+    {
+       Serial.println("Turning alarm ON in 2 seconds...");
+        for (int i=0; i<2; i++){
+           digitalWrite(ledPin, LOW);
+           delay(100);
+          digitalWrite(ledPin, HIGH);
+          delay(100);
+     }   
+        digitalWrite(ledPin, LOW);
+        delay(2000);
+        STATE = 0;
+      }
+      delay(1000);
+      clearData();
+    }
+}
